@@ -7,10 +7,12 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA
 from uuid import uuid4
+import json
+import hashlib
 
 MINING_SENDER = "The Blockchain"
 MINING_REWARD = 1
-
+MINING_DIFFICULTY = 2
 
 class Blockchain:
 
@@ -46,11 +48,29 @@ class Blockchain:
         except ValueError:
             return False
 
-    def proof_of_work(self):
-        return 12345
+    @staticmethod
+    def vaild_proof(transactions, last_hash, nonce, difficulty=MINING_DIFFICULTY):
+        guess = (str(transactions) + str(last_hash) + str(nonce)).encode('utf8')
+        h = hashlib.new('sha256')
+        h.update(guess)
+        guess_hash = h.hexdigest()
+        return guess_hash[:difficulty] == '0' * difficulty
 
-    def hash(self, block):
-        return 'abc'
+    def proof_of_work(self):
+        last_block = self.chain[-1]
+        last_hash = self.hash(last_block)
+        nonce = 0
+        while self.vaild_proof(self.transactions, last_hash, nonce) is False:
+            nonce += 1
+
+        return nonce
+
+    @staticmethod
+    def hash(block):
+        block_string = json.dumps(block, sort_keys=True).encode('utf8')
+        h = hashlib.new('sha256')
+        h.update(block_string)
+        return h.hexdigest()
 
     def submit_transaction(self, sender_public_key, recipient_public_key, signature, amount):
         transaction = OrderedDict({
